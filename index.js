@@ -7,7 +7,6 @@ const User = require("./models/user");
 app.use(express.json());
 
 //signup controller//
-
 app.post("/signup",async(req,res)=>{
     try {
         const user = new user(req.body);
@@ -15,6 +14,36 @@ app.post("/signup",async(req,res)=>{
         res.send("User Added Successfully");
     } catch (error) {
         res.status(400).send("Error saving the User:"+ error.message);
+    }
+})
+
+//get user details//
+app.get("/user",async(req,res)=>{
+    try {
+        const userEmail = req.body.email;
+        const user = await User.findOne({email:userEmail});
+        if(!user){
+            return res.status(404).json({message:"User Not Found"});
+        }
+        res.send(user);
+    } catch (error) {
+      res.status(500).json({
+        sucess:false,
+        message:"Something went wrong",
+    })
+    }
+})
+
+//feed api to get all users//
+app.get("/feed",async(req,res)=>{
+    try {
+        const users = await User.find({});
+        res.send(users);
+    } catch (error) {
+        return res.status(404).json({
+            success:false,
+            message:"Something went wrong",
+        })
     }
 })
 
