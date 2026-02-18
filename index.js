@@ -47,6 +47,24 @@ app.get("/feed",async(req,res)=>{
     }
 })
 
+//delete a user API//
+app.delete("/user",async(req,res)=>{
+   try {
+     const userId = req.body.userId;
+     const user = await User.findByIdAndDelete(userId);
+     return res.status(200).json({
+        success:true,
+        message:"user deleted Successfully",
+     })
+   } catch (error) {
+     return res.status(404).json({
+        success:false,
+        message:"failed to delete user"
+     })
+   }
+
+})
+
 //calling the db connection//
 Dbconnect();
 app.use("/",(req,res)=>{
