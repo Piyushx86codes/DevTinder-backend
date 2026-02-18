@@ -65,6 +65,21 @@ app.delete("/user",async(req,res)=>{
 
 })
 
+//update user data API//
+app.patch("/user",async(req,res)=>{
+    try {
+        const userId = req.body.userId;
+        const data = req.body;
+        await User.findByIdAndUpdate({_id:id},data);
+        return res.send("User Updated Successfully");
+    } catch (error) {
+        return res.status(500).json({
+            success:false,
+            message:"failed to Update User info",
+        })
+    }
+})
+
 //calling the db connection//
 Dbconnect();
 app.use("/",(req,res)=>{
