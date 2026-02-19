@@ -66,19 +66,33 @@ app.delete("/user",async(req,res)=>{
 })
 
 //update user data API//
-app.patch("/user",async(req,res)=>{
-    try {
-        const userId = req.body.userId;
-        const data = req.body;
-        await User.findByIdAndUpdate({_id:id},data);
-        return res.send("User Updated Successfully");
-    } catch (error) {
-        return res.status(500).json({
-            success:false,
-            message:"failed to Update User info",
-        })
-    }
-})
+app.patch("/user/:userId", async (req, res) => {
+  const userId = req.params?.userId;
+  const data = req.body;
+  const ALLOWED_UPDATES = ["photoUrl","skills","gender","age"];
+
+  const isUpdateAllowed = Objects.keys(data).every((k)=>
+    ALLOWED_UPDATES.includes(k)
+  )
+  if(!isUpdateAllowed){
+   throw new Error("Update Not Allowed");
+  }
+  if(data?.skills.length > 10){
+    throw new Error("Skills cannot be more than 10");
+  }
+  try {
+    await User.findByIdAndUpdate({ _id: id }, data, {
+      returnDocument: "after",
+      runValidators: true,
+    });
+    return res.send("User Updated Successfully");
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "failed to Update User info",
+    });
+  }
+});
 
 //calling the db connection//
 Dbconnect();
