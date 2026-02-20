@@ -1,20 +1,60 @@
 const express = require("express");
 const app = express();
-const PORT = 3000;
 const Dbconnect = require("./config/database");
+const bcrypt = require("bcrypt");
 const User = require("./models/user");
+const validateSignUpdata = require("./utils/validateSignUpdata");
+const PORT = 3000;
 
 app.use(express.json());
 
 //signup controller//
 app.post("/signup",async(req,res)=>{
+    
     try {
+        //vaidation of data//
+        validateSignUpdata(req);
+        const {firstName,lastName,email,password} = req.body;
+        //hashing the password
+        const passwordhash = bcrypt.hash(password,10);
         const user = new user(req.body);
-        await user.save();
+        await user.save({
+          firstName,
+          lastName,
+          email,
+          password:passwordhash,
+
+        });
         res.send("User Added Successfully");
     } catch (error) {
         res.status(400).send("Error saving the User:"+ error.message);
     }
+})
+
+//login controller//
+app.post("/login",async(req,res)=>{
+  try {
+    const {email,password} = req.body;
+    const user = await user.findOne({email});
+    if(!user){
+      throw new Error('Unable to find Email Id');
+    }
+    const isPassword = await bcrypt.compare(password,user.passowrd);
+    if(isPassword){
+      return res.status(200).json({
+        success:true,
+        message:"Login Successfull",
+      })
+    }else{
+      throw new Error("password is incorrect");
+    }
+  } catch (error) {
+    console.error("Error Message:"+ error);
+    return res.status(500).json({
+      success:false,
+      message:"Failed to Login"
+    })
+  }
 })
 
 //get user details//
