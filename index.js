@@ -2,11 +2,15 @@ const express = require("express");
 const app = express();
 const Dbconnect = require("./config/database");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const User = require("./models/user");
+const cookieParser = require("cookie-parser");
 const validateSignUpdata = require("./utils/validateSignUpdata");
+const {userAuth} = require("./middlewares/auth");
 const PORT = 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 
 //signup controller//
 app.post("/signup",async(req,res)=>{
@@ -39,8 +43,16 @@ app.post("/login",async(req,res)=>{
     if(!user){
       throw new Error('Unable to find Email Id');
     }
-    const isPassword = await bcrypt.compare(password,user.passowrd);
-    if(isPassword){
+    const isPasswordValid = await bcrypt.compare(password,user.passowrd);
+    if(isPasswordValid){
+     
+    //create a jwt token//
+    const token = jwt.sign({_id:user._id},"Mysecret");
+
+
+    //send token inside cookie and send it to user//
+
+    
       return res.status(200).json({
         success:true,
         message:"Login Successfull",
@@ -57,82 +69,23 @@ app.post("/login",async(req,res)=>{
   }
 })
 
-//get user details//
-app.get("/user",async(req,res)=>{
-    try {
-        const userEmail = req.body.email;
-        const user = await User.findOne({email:userEmail});
-        if(!user){
-            return res.status(404).json({message:"User Not Found"});
-        }
-        res.send(user);
-    } catch (error) {
-      res.status(500).json({
-        sucess:false,
-        message:"Something went wrong",
-    })
-    }
-})
 
-//feed api to get all users//
-app.get("/feed",async(req,res)=>{
-    try {
-        const users = await User.find({});
-        res.send(users);
-    } catch (error) {
-        return res.status(404).json({
-            success:false,
-            message:"Something went wrong",
-        })
-    }
-})
-
-//delete a user API//
-app.delete("/user",async(req,res)=>{
-   try {
-     const userId = req.body.userId;
-     const user = await User.findByIdAndDelete(userId);
-     return res.status(200).json({
-        success:true,
-        message:"user deleted Successfully",
-     })
-   } catch (error) {
-     return res.status(404).json({
-        success:false,
-        message:"failed to delete user"
-     })
-   }
-
-})
-
-//update user data API//
-app.patch("/user/:userId", async (req, res) => {
-  const userId = req.params?.userId;
-  const data = req.body;
-  const ALLOWED_UPDATES = ["photoUrl","skills","gender","age"];
-
-  const isUpdateAllowed = Objects.keys(data).every((k)=>
-    ALLOWED_UPDATES.includes(k)
-  )
-  if(!isUpdateAllowed){
-   throw new Error("Update Not Allowed");
-  }
-  if(data?.skills.length > 10){
-    throw new Error("Skills cannot be more than 10");
-  }
+//profile api//
+app.get("/profile", userAuth,async (req, res) => {
   try {
-    await User.findByIdAndUpdate({ _id: id }, data, {
-      returnDocument: "after",
-      runValidators: true,
-    });
-    return res.send("User Updated Successfully");
+    const user = req.user;
+    if(!user){
+      throw new Error("User does not Exist");
+    }
+    res.send(user);
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "failed to Update User info",
-    });
+    res.status(500).json({
+      success:false,
+      message:"SomeThing Went Wrong",
+    })
   }
 });
+
 
 //calling the db connection//
 Dbconnect();
