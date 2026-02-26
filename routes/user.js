@@ -2,7 +2,8 @@ const express = require('express');
 const userRouter = express.Router();
 const {userAuth} = require("../middlewares/auth");
 const ConnectionRequest = require("../models/connectionRequest");
- const USER_SAFEDATA = ["firstName","lastName"];
+const USER_SAFEDATA = ["firstName","lastName"];
+const User = require("../models/user");
 
 
 userRouter.get("/user/request/recieved",userAuth,async(req,res)=>{
@@ -46,6 +47,34 @@ userRouter.get("/user/connections",userAuth,async(req,res)=>{
                 message:"Something Went Worng"
             }
         )
+    }
+})
+
+userRouter.get("/feed?page=1&limit=10",userAuth,async(req,res)=>{
+    try {
+        const page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 10;
+        limit = limit > 50 ? 50 : limit;
+        const skip = (page-1) * limit;
+        const loggedInUser = req.user;
+        //find all connection request that have been sent and accepted//
+        const connectionRequest = await ConnectionRequest.find({
+            $or:[
+                {fromUserId:loggedInUser._id},{toUserId:loggedInUser._id}
+            ],
+        }).select("fromUserId toUserId").skip(skip).limit(limit);
+
+        const hideUsersFromFeed = new Set();
+        connectionRequest.forEach((req)=>{
+            hideUsersFromFeed.add(req.fromUserId.toString());
+            hideUsersFromFeed.add(req.toUserId.toString());
+        });
+
+        const users = await  User.find({
+            $and:[{_id:{$nin : Array.from(hideUsersFromFeed)},},{_id:{$ne:loggedInUser._id}},]
+        }).select(USER_SAFEDATA);
+    } catch (error) {
+        res.status(400).json({message:error.message})
     }
 })
 
